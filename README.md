@@ -2,12 +2,12 @@
 
 > Calibrated machine-learning probabilities for **which gold (XAU/USD) price levels will hold vs break** — each trading day, from the daily open.
 
-[![Live demo](https://img.shields.io/badge/Live%20demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://share.streamlit.io/)
+[![Live demo](https://img.shields.io/badge/Live%20demo-Open%20app-FF4B4B?logo=streamlit&logoColor=white)](https://gold-level-predictor-e4tnt5zxva7x6vjgbvrgas.streamlit.app/)
 [![Python 3.10](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Model: LightGBM](https://img.shields.io/badge/Model-LightGBM-9ACD32)](https://lightgbm.readthedocs.io/)
 ![Status](https://img.shields.io/badge/status-research-orange)
 
-> ▶️ **Live demo:** _deploy on Streamlit Community Cloud and paste the link here_ (steps in [Run the live demo](#-run-the-live-demo)).
+> ▶️ **Live demo:** **https://gold-level-predictor-e4tnt5zxva7x6vjgbvrgas.streamlit.app/** — type a daily open and see the 21 levels ranked by react probability.
 
 ---
 
