@@ -1,0 +1,9 @@
+# Pinned to the versions the model was trained/saved with, so the calibrated
+# joblib loads correctly on Streamlit Community Cloud. Use Python 3.10.
+streamlit==1.58.0
+pandas==2.2.3
+numpy==1.24.3
+scikit-learn==1.6.1
+lightgbm==4.6.0
+joblib==1.4.2
+pyarrow==24.0.0

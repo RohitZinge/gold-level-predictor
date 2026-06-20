@@ -1,0 +1,23 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── OS / editor / tooling ───────────────────────────────
+.DS_Store
+.claude/
+.dukascopy-cache/
+*.bak
+
+# ── Data ────────────────────────────────────────────────
+# The full market history is large and fully regenerable via the src/ pipeline.
+# We intentionally KEEP the small parquets the live app reads at runtime:
+#   data/processed/{dataset,m15,d1,levels}.parquet  and  data/external/*.csv
+# Everything heavy below is ignored.
+data/raw/
+data/processed/m5.parquet
+data/processed/h1.parquet
+data/processed/h4.parquet
+data/processed/labels.parquet

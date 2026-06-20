@@ -1,0 +1,153 @@
+//@version=5
+indicator("Gold Session Levels - All Sessions", overlay=true, max_lines_count=500)
+
+// ─── INPUTS ───────────────────────────────────────────────────────────────────
+lineW_Open  = input.int(3, "Opening Line Width",  minval=1)
+lineW_Thick = input.int(2, "Thick Level Width",   minval=1)
+lineW_Thin  = input.int(1, "Thin Level Width",    minval=1)
+colOpen     = input.color(color.yellow, "Opening Color")
+colThick    = input.color(color.white,  "Thick Level Color")
+colThin     = input.color(color.gray,   "Thin Level Color")
+
+// ─── MODEL REACT % (added — display toggle only) ───────────────────────────────
+showModelPct = input.bool(true, "Show model react %", group="Model React %")
+
+// ─── PREVIOUS DAY LEVELS ───────────────────────────────────────────────────────
+showPDHL   = input.bool(true,        "Show Previous Day High / Low", group="Previous Day Levels")
+colPDH     = input.color(color.lime, "Prev Day High Color",          group="Previous Day Levels")
+colPDL     = input.color(color.red,  "Prev Day Low Color",           group="Previous Day Levels")
+lineW_PDHL = input.int(2,            "Prev Day Line Width", minval=1, group="Previous Day Levels")
+
+// ─── DATE RANGE FILTER (date only, no time) ────────────────────────────────────
+useDateRange = input.bool(true, "Enable Date Range", group="Date Range")
+
+startYear  = input.int(2020, "From", minval=1970, inline="start", group="Date Range")
+startMonth = input.int(1,    "/",    minval=1, maxval=12, inline="start", group="Date Range")
+startDay   = input.int(1,    "/",    minval=1, maxval=31, inline="start", group="Date Range", tooltip="Start date — Year / Month / Day")
+
+endYear    = input.int(2030, "To",   minval=1970, inline="end", group="Date Range")
+endMonth   = input.int(12,   "/",    minval=1, maxval=12, inline="end", group="Date Range")
+endDay     = input.int(31,   "/",    minval=1, maxval=31, inline="end", group="Date Range", tooltip="End date — Year / Month / Day")
+
+startTime   = timestamp(startYear, startMonth, startDay, 0, 0, 0)
+endTime     = timestamp(endYear, endMonth, endDay, 23, 59, 59)
+inDateRange = not useDateRange or (time >= startTime and time <= endTime)
+
+// ─── PREVIOUS DAY HIGH / LOW (confirmed, non-repainting) ───────────────────────
+[pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+
+// ─── DIGIT SUM FUNCTION ───────────────────────────────────────────────────────
+f_sumDigits(int num) =>
+    s   = str.tostring(num)
+    sum = 0
+    for i = 0 to str.length(s) - 1
+        ch = str.substring(s, i, i + 1)
+        if ch != "-"
+            sum += int(str.tonumber(ch))
+    sum
+
+// ─── SESSION DETECTION ────────────────────────────────────────────────────────
+sessionStart = timeframe.change("D")
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+var line[]  activeLines  = array.new_line()
+var label[] activeLabels = array.new_label()
+
+// ════ MODEL REACT % — auto-filled by the Streamlit app (do not edit by hand) ════
+// 21 values in step order: index 0 = step -10 (lowest) … index 20 = step +10 (highest).
+// They are shown ONLY on the day whose open == targetOpen (the date you picked),
+// stored in their own array so they persist and don't touch your label logic.
+var modelPct        = array.from({{PCTS}})
+var float targetOpen = {{OPEN}}
+var label[] pctLabels = array.new_label()
+
+// ─── MAIN LOGIC ───────────────────────────────────────────────────────────────
+if sessionStart
+
+    // STEP 1: Cap previous session lines at bar_index - 1
+    if array.size(activeLines) > 0
+        for l in activeLines
+            line.set_extend(l, extend.none)
+            line.set_x2(l, bar_index - 1)
+        array.clear(activeLines)
+
+    // Remove previous session labels (Prev Day High/Low text)
+    if array.size(activeLabels) > 0
+        for lb in activeLabels
+            label.delete(lb)
+        array.clear(activeLabels)
+
+    // Only draw new session levels inside the chosen date range
+    if inDateRange
+
+        // STEP 2: A2 = open of this exact candle (first bar of new day)
+        A2          = open
+        intA2       = int(A2)
+        C2          = f_sumDigits(intA2)
+        D2          = C2 / 10.0
+        E2          = math.sqrt(A2)
+        F2          = E2 * D2
+        G2          = F2 / 2.0
+        step_factor = G2 / 20000.0
+
+        // STEP 3: Build 21 levels (10 below, center, 10 above)
+        float[] levels = array.new_float(21)
+        for d = 0 to 9
+            array.set(levels, d, A2 * (1 - (10 - d) * step_factor))
+        array.set(levels, 10, A2)
+        for u = 1 to 10
+            array.set(levels, 10 + u, A2 * (1 + u * step_factor))
+
+        // STEP 4: Draw 21 lines from this bar
+        for idx = 0 to 20
+            offset = idx - 10
+            lvl    = array.get(levels, idx)
+            int   wid = na
+            color col = na
+
+            if offset == 0
+                wid := lineW_Open
+                col := colOpen
+            else
+                absOff = math.abs(offset)
+                if absOff % 2 == 0
+                    wid := lineW_Thick
+                    col := colThick
+                else
+                    wid := lineW_Thin
+                    col := colThin
+
+            l = line.new(
+                 x1     = bar_index,
+                 y1     = lvl,
+                 x2     = bar_index + 1,
+                 y2     = lvl,
+                 color  = col,
+                 width  = wid,
+                 style  = line.style_solid,
+                 extend = extend.right)
+
+            array.push(activeLines, l)
+
+            // ── model react% tag — ONLY on the picked day's session (matched by open) ──
+            // Pushed to pctLabels (persistent) so it stays on THAT day and your
+            // session label-clearing above is left completely unchanged.
+            if showModelPct and array.size(modelPct) == 21 and math.abs(A2 - targetOpen) < 0.1
+                pv   = array.get(modelPct, idx)
+                role = offset < 0 ? "Support" : offset > 0 ? "Resistance" : "Open"
+                txt  = str.tostring(pv) + "%  " + role
+                lbl  = label.new(bar_index, lvl, txt, xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=col, size=size.normal)
+                array.push(pctLabels, lbl)
+
+        // STEP 5: Previous day High & Low levels + text labels
+        if showPDHL and not na(pdh) and not na(pdl)
+            // High level
+            lH = line.new(bar_index, pdh, bar_index + 1, pdh, color=colPDH, width=lineW_PDHL, style=line.style_solid, extend=extend.right)
+            array.push(activeLines, lH)
+            lblH = label.new(bar_index, pdh, "Previous Day High", xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_left, color=color.new(color.black, 100), textcolor=colPDH, size=size.small)
+            array.push(activeLabels, lblH)
+            // Low level
+            lL = line.new(bar_index, pdl, bar_index + 1, pdl, color=colPDL, width=lineW_PDHL, style=line.style_solid, extend=extend.right)
+            array.push(activeLines, lL)
+            lblL = label.new(bar_index, pdl, "Previous Day Low", xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_left, color=color.new(color.black, 100), textcolor=colPDL, size=size.small)
+            array.push(activeLabels, lblL)

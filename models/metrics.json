@@ -1,0 +1,30 @@
+[
+  {
+    "model":"no-skill (base rate)",
+    "roc_auc":0.5,
+    "pr_auc":0.3874647092,
+    "brier":0.2379993352,
+    "log_loss":0.6689778934
+  },
+  {
+    "model":"baseline LogReg",
+    "roc_auc":0.5524707379,
+    "pr_auc":0.4388037061,
+    "brier":0.2435370042,
+    "log_loss":0.6801323469
+  },
+  {
+    "model":"LightGBM (raw)",
+    "roc_auc":0.6974928833,
+    "pr_auc":0.5983614833,
+    "brier":0.2134273275,
+    "log_loss":0.6140640076
+  },
+  {
+    "model":"LightGBM (calibrated)",
+    "roc_auc":0.6965420373,
+    "pr_auc":0.5837268041,
+    "brier":0.2097493881,
+    "log_loss":0.6075618845
+  }
+]
